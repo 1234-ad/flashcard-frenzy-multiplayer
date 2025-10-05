@@ -7,6 +7,7 @@ export default function Home() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [roomId, setRoomId] = useState('')
+  const [spectateRoomId, setSpectateRoomId] = useState('')
 
   useEffect(() => {
     checkUser()
@@ -33,6 +34,14 @@ export default function Home() {
       window.location.href = `/game/${roomId.trim()}`
     } else {
       alert('Please enter a valid room ID')
+    }
+  }
+
+  const spectateGame = () => {
+    if (spectateRoomId.trim()) {
+      window.location.href = `/spectate/${spectateRoomId.trim()}`
+    } else {
+      alert('Please enter a valid room ID to spectate')
     }
   }
 
@@ -97,7 +106,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           <div className="card">
             <h2 className="text-2xl font-bold mb-4 text-center">Create Game</h2>
             <p className="text-gray-600 mb-6 text-center">
@@ -134,6 +143,30 @@ export default function Home() {
               </button>
             </div>
           </div>
+
+          <div className="card">
+            <h2 className="text-2xl font-bold mb-4 text-center">Spectate Game</h2>
+            <p className="text-gray-600 mb-4 text-center">
+              Watch an ongoing game and chat with other spectators
+            </p>
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={spectateRoomId}
+                onChange={(e) => setSpectateRoomId(e.target.value)}
+                placeholder="Enter Room ID..."
+                className="input-field"
+                onKeyPress={(e) => e.key === 'Enter' && spectateGame()}
+              />
+              <button
+                onClick={spectateGame}
+                disabled={!spectateRoomId.trim()}
+                className="w-full btn-secondary py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                👁️ Spectate Game
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="mt-12 text-center">
@@ -141,6 +174,7 @@ export default function Home() {
             <h3 className="text-lg font-semibold mb-4">Game Features</h3>
             <ul className="text-left space-y-2 text-gray-600">
               <li>✅ Real-time multiplayer racing</li>
+              <li>✅ Spectator mode with chat</li>
               <li>✅ Screen reader accessibility</li>
               <li>✅ Match history tracking</li>
               <li>✅ Instant feedback on answers</li>
