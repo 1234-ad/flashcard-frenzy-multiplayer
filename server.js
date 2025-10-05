@@ -52,12 +52,57 @@ app.prepare().then(() => {
           
           // Send updated game state to all players in room
           io.to(roomId).emit('game-state-update', room.getGameState())
+          
+          // Send spectator state to spectators
+          socket.to(roomId).emit('spectator-state-update', room.getSpectatorState())
         }
         
-        console.log(`User ${user.email} joined room ${roomId}`)
+        console.log(`User ${user.email} joined room ${roomId} as player`)
       } catch (error) {
         console.error('Error joining room:', error)
         socket.emit('error', { message: 'Failed to join room' })
+      }
+    })
+
+    socket.on('join-as-spectator', async ({ roomId, user }) => {
+      try {
+        socket.join(roomId)
+        
+        const room = getOrCreateRoom(roomId)
+        const spectatorAdded = room.addSpectator(user)
+        
+        if (spectatorAdded) {
+          socket.emit('spectator-joined', { spectator: user })
+          
+          // Notify players and other spectators
+          socket.to(roomId).emit('spectator-joined', { spectator: user })
+          
+          // Send current spectator state to the new spectator
+          socket.emit('spectator-state-update', room.getSpectatorState())
+          
+          // Send updated game state to players
+          io.to(roomId).emit('game-state-update', room.getGameState())
+        }
+        
+        console.log(`User ${user.email} joined room ${roomId} as spectator`)
+      } catch (error) {
+        console.error('Error joining as spectator:', error)
+        socket.emit('error', { message: 'Failed to join as spectator' })
+      }
+    })
+
+    socket.on('spectator-chat', ({ roomId, user, message }) => {
+      try {
+        const room = getOrCreateRoom(roomId)
+        const chatMessage = room.addSpectatorMessage(user, message)
+        
+        // Send chat message to all spectators in the room
+        io.to(roomId).emit('spectator-chat-message', chatMessage)
+        
+        console.log(`Spectator chat in room ${roomId}: ${user.email}: ${message}`)
+      } catch (error) {
+        console.error('Error handling spectator chat:', error)
+        socket.emit('error', { message: 'Failed to send chat message' })
       }
     })
 
@@ -72,6 +117,7 @@ app.prepare().then(() => {
           if (room.startGame(flashcards)) {
             io.to(roomId).emit('game-started')
             io.to(roomId).emit('game-state-update', room.getGameState())
+            io.to(roomId).emit('spectator-state-update', room.getSpectatorState())
             console.log(`Game started in room ${roomId}`)
           }
         }
@@ -121,8 +167,11 @@ app.prepare().then(() => {
             })
           }
           
-          // Send updated game state
+          // Send updated game state to players
           io.to(roomId).emit('game-state-update', room.getGameState())
+          
+          // Send updated spectator state to spectators
+          io.to(roomId).emit('spectator-state-update', room.getSpectatorState())
         }
       } catch (error) {
         console.error('Error submitting answer:', error)
@@ -133,9 +182,9 @@ app.prepare().then(() => {
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id)
       
-      // Handle player leaving rooms
+      // Handle player/spectator leaving rooms
       // Note: In a production app, you'd want to track which rooms each socket is in
-      // and remove the player from those rooms
+      // and remove the player/spectator from those rooms
     })
   })
 
