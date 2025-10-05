@@ -2,6 +2,7 @@ export class GameRoom {
   constructor(roomId) {
     this.roomId = roomId
     this.players = []
+    this.spectators = []
     this.currentCardIndex = 0
     this.flashcards = []
     this.scores = {}
@@ -9,12 +10,22 @@ export class GameRoom {
     this.winner = null
     this.maxScore = 5
     this.startTime = null
+    this.spectatorChat = []
   }
 
   addPlayer(player) {
     if (this.players.length < 2 && !this.players.find(p => p.id === player.id)) {
       this.players.push(player)
       this.scores[player.id] = 0
+      return true
+    }
+    return false
+  }
+
+  addSpectator(spectator) {
+    if (!this.spectators.find(s => s.id === spectator.id) && 
+        !this.players.find(p => p.id === spectator.id)) {
+      this.spectators.push(spectator)
       return true
     }
     return false
@@ -27,6 +38,27 @@ export class GameRoom {
     if (this.players.length === 0) {
       this.gameStatus = 'finished'
     }
+  }
+
+  removeSpectator(spectatorId) {
+    this.spectators = this.spectators.filter(s => s.id !== spectatorId)
+  }
+
+  addSpectatorMessage(spectator, message) {
+    const chatMessage = {
+      id: Date.now() + Math.random(),
+      spectator,
+      message,
+      timestamp: new Date()
+    }
+    this.spectatorChat.push(chatMessage)
+    
+    // Keep only last 50 messages
+    if (this.spectatorChat.length > 50) {
+      this.spectatorChat = this.spectatorChat.slice(-50)
+    }
+    
+    return chatMessage
   }
 
   startGame(flashcards) {
@@ -113,12 +145,36 @@ export class GameRoom {
     return {
       roomId: this.roomId,
       players: this.players,
+      spectators: this.spectators,
       currentCard: this.getCurrentCard(),
       scores: this.scores,
       gameStatus: this.gameStatus,
       winner: this.winner,
       currentCardIndex: this.currentCardIndex,
-      totalCards: this.flashcards.length
+      totalCards: this.flashcards.length,
+      spectatorChat: this.spectatorChat
+    }
+  }
+
+  getSpectatorState() {
+    return {
+      roomId: this.roomId,
+      players: this.players.map(p => ({
+        id: p.id,
+        name: p.name || p.email?.split('@')[0],
+        email: p.email
+      })),
+      spectators: this.spectators,
+      currentCard: this.gameStatus === 'playing' ? {
+        question: this.getCurrentCard()?.question,
+        // Don't show answer to spectators during game
+      } : this.getCurrentCard(),
+      scores: this.scores,
+      gameStatus: this.gameStatus,
+      winner: this.winner,
+      currentCardIndex: this.currentCardIndex,
+      totalCards: this.flashcards.length,
+      spectatorChat: this.spectatorChat
     }
   }
 
@@ -131,7 +187,8 @@ export class GameRoom {
       winner: this.winner,
       duration: this.startTime ? new Date() - this.startTime : 0,
       totalCards: this.flashcards.length,
-      completedAt: new Date()
+      completedAt: new Date(),
+      spectatorCount: this.spectators.length
     }
   }
 }
